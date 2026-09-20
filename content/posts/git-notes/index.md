@@ -4,6 +4,7 @@ date = 2026-09-19
 categories = ["技术"]
 tags = ["Git"]
 description = "16 条 git 常用命令"
+draft = false
 +++
 
 > 备注：以下内容中，包含CommitHash的地方（提交对象）也可以用HEAD及相对引用类型
