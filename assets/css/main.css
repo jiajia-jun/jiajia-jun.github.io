@@ -1,0 +1,1131 @@
+/* ============================================================================
+   jiajia-jun · 自建主题样式
+   ============================================================================
+
+   配色架构
+   --------
+   品牌色只作「色相锚点」，实际渲染用一套派生的语义化 token：
+
+     #A1FEEF  薄荷   —— 只做背景 / 高亮，永不承载正文
+     #658AE4  钢蓝   —— 只做 ≥20px 粗体文字，或非文字的 UI（边框 / 图标 / 填充）
+     #4C68AB  深钢蓝 —— #658AE4 同色相压暗到 75%，可承载任意字号
+
+   对比度纪律（WCAG AA：正文 4.5:1，大字/UI 3:1；以下均为实测值）
+
+     浅色模式
+       --fg        #101828 on #FBFEFD .... 16.50:1  ✓ 正文
+       --fg-muted  #5A6B7F on #FBFEFD ..... 5.31:1  ✓ 次要文字
+       --link      #4C68AB on #FBFEFD ..... 5.42:1  ✓ 任意字号
+       --accent    #658AE4 on #FBFEFD ..... 3.24:1  ✓ 仅大字（≥20px 粗体）与 UI
+       --mark-fg   #101828 on #A1FEEF .... 17.90:1  ✓ 高亮块
+
+     深色模式
+       --fg        #DCE6F5 on #0E1626 .... 14.37:1  ✓
+       --fg-muted  #94A3B8 on #0E1626 ..... 7.06:1  ✓
+       --link      #A1FEEF on #0E1626 .... 15.45:1  ✓
+       --accent    #A1FEEF on #0E1626 .... 15.45:1  ✓
+
+   深色模式的实现
+   --------------
+   用 light-dark() 单一来源定义两套值，靠 color-scheme 切换，避免整套色板写两遍
+
+   注意：这里**不能**用「同一属性写两遍」的老式兜底写法——
+     --bg: #FBFEFD;
+     --bg: light-dark(#FBFEFD, #0E1626);
+   因为自定义属性能接受任意 token 流，第二条声明即使浏览器不认识
+   light-dark() 也照样生效，于是老浏览器拿到的不是兜底值，而是
+   「guaranteed-invalid」——在使用处会退化成 unset，颜色直接崩掉
+   所以用 @supports 显式门控：不支持 light-dark() 就整体停在浅色模式
+   ========================================================================== */
+
+/* ---------------------------------------------------------------------------
+   1. 设计 token
+   --------------------------------------------------------------------------- */
+
+:root {
+  /* 品牌色（色相锚点，不在组件里直接使用，只做派生源） */
+  --brand-mint:      #A1FEEF;
+  --brand-peri:      #658AE4;
+  --brand-peri-deep: #4C68AB;
+
+  /* ---- 浅色兜底值（同时也是下面 light-dark() 的第一个参数）---- */
+  --bg:           #FBFEFD;
+  --bg-elev:      #FFFFFF;
+  --bg-sunken:    #F1F7FA;
+  --fg:           #101828;
+  --fg-muted:     #5A6B7F;
+  --link:         #4C68AB;
+  --link-hover:   #35497A;
+  --accent:       #658AE4;
+  --accent-soft:  #EEF3FD;
+  --mark-bg:      #A1FEEF;
+  --mark-fg:      #0B1A2B;
+  --border:       #E4EBF3;
+  --border-strong:#CBD8E6;
+  --card-bg:      #FFFFFF;
+  --card-border:  #E4EBF3;
+
+  /* 阴影拆成「颜色」+「几何」两部分——
+     light-dark() 只能返回颜色，不能返回整个 box-shadow */
+  --shadow-c-soft:  rgba(16, 24, 40, .05);
+  --shadow-c-brand: rgba(101, 138, 228, .16);
+  --glow:           rgba(101, 138, 228, .14);
+
+  --sel-bg:       #A1FEEF;
+  --sel-fg:       #0B1A2B;
+
+  /* 代码块
+     底色取中性灰而不是浅蓝，方块也不再描一条蓝色左边线
+     之前那三条（浅蓝底 + 左蓝条 + 大圆角）叠在一起太像引用块了 */
+  --code-bg:      #F3F5F7;
+  --code-fg:      #1B2735;
+
+  /* 语法高亮 token */
+  --t-keyword:    #35497A;
+  --t-string:     #1F7A6B;
+  --t-comment:    #7A8A9B;
+  --t-number:     #8A4FB8;
+  --t-func:       #4C68AB;
+  --t-name:       #1B2735;
+  --t-builtin:    #2C6E9E;
+  --t-punct:      #5A6B7F;
+  --t-error:      #B4324A;
+
+  /* ---- 排版 ---- */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+               "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC",
+               "Noto Sans SC", "Source Han Sans SC", "WenQuanYi Micro Hei",
+               system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+               "Liberation Mono", "Courier New", monospace;
+
+  --fs-xs:   0.8125rem;  /* 13px */
+  --fs-sm:   0.875rem;   /* 14px */
+  --fs-base: 1.0625rem;  /* 17px —— 中文正文的舒适区 */
+  --fs-lg:   1.1875rem;  /* 19px */
+  --fs-xl:   1.375rem;   /* 22px */
+  --fs-2xl:  1.625rem;   /* 26px */
+  --fs-3xl:  2rem;       /* 32px */
+  --fs-4xl:  2.5rem;     /* 40px */
+
+  --lh-tight: 1.3;
+  --lh-snug:  1.5;
+  --lh-base:  1.8;       /* 中文行高要比拉丁文更松 */
+
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-5: 1.5rem;
+  --sp-6: 2rem;
+  --sp-7: 3rem;
+  --sp-8: 4rem;
+
+  --r-sm:   0.5rem;
+  --r-md:   0.75rem;
+  --r-lg:   1rem;
+  --r-full: 999px;
+
+  --w-page:  62.5rem;    /* 1000px */
+  --w-prose: 45rem;      /* 720px —— 正文舒适阅读宽度 */
+}
+
+@supports (color: light-dark(#000, #fff)) {
+  :root {
+    color-scheme: light dark;
+
+    --bg:           light-dark(#FBFEFD, #0E1626);
+    --bg-elev:      light-dark(#FFFFFF, #162034);
+    --bg-sunken:    light-dark(#F1F7FA, #0A1120);
+    --fg:           light-dark(#101828, #DCE6F5);
+    --fg-muted:     light-dark(#5A6B7F, #94A3B8);
+    --link:         light-dark(#4C68AB, #A1FEEF);
+    --link-hover:   light-dark(#35497A, #C9FFF5);
+    --accent:       light-dark(#658AE4, #A1FEEF);
+    --accent-soft:  light-dark(#EEF3FD, #16283F);
+    --mark-bg:      light-dark(#A1FEEF, #A1FEEF);
+    --mark-fg:      light-dark(#0B1A2B, #0B1A2B);
+    --border:       light-dark(#E4EBF3, #22304A);
+    --border-strong:light-dark(#CBD8E6, #2F4160);
+    --card-bg:      light-dark(#FFFFFF, #131E31);
+    --card-border:  light-dark(#E4EBF3, #22304A);
+
+    --shadow-c-soft:  light-dark(rgba(16, 24, 40, .05),  rgba(0, 0, 0, .45));
+    --shadow-c-brand: light-dark(rgba(101, 138, 228, .16), rgba(161, 254, 239, .10));
+    --glow:           light-dark(rgba(101, 138, 228, .14), rgba(161, 254, 239, .12));
+
+    --sel-bg:       light-dark(#A1FEEF, #2A4A6B);
+    --sel-fg:       light-dark(#0B1A2B, #EAF2FF);
+
+    --code-bg:      light-dark(#F3F5F7, #151B24);
+    --code-fg:      light-dark(#1B2735, #C9D6E8);
+
+    --t-keyword:    light-dark(#35497A, #A1FEEF);
+    --t-string:     light-dark(#1F7A6B, #7FE3D4);
+    --t-comment:    light-dark(#7A8A9B, #6B7F99);
+    --t-number:     light-dark(#8A4FB8, #C9A6F0);
+    --t-func:       light-dark(#4C68AB, #8FB4F0);
+    --t-name:       light-dark(#1B2735, #DCE6F5);
+    --t-builtin:    light-dark(#2C6E9E, #7FC8E8);
+    --t-punct:      light-dark(#5A6B7F, #94A3B8);
+    --t-error:      light-dark(#B4324A, #F08A9B);
+  }
+
+  /* JS 会把当前生效的主题写进 data-theme，这两条负责覆盖系统偏好
+     放在 @supports 内部：不支持 light-dark() 时它们不生效，
+     免得出现「深色滚动条 + 浅色页面」的割裂 */
+  :root[data-theme="light"] { color-scheme: light; }
+  :root[data-theme="dark"]  { color-scheme: dark; }
+}
+
+
+/* ---------------------------------------------------------------------------
+   2. 重置与基础
+   --------------------------------------------------------------------------- */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  line-height: var(--lh-base);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+main { flex: 1 0 auto; }
+
+img, svg, video { max-width: 100%; height: auto; display: block; }
+
+a {
+  color: var(--link);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+a:hover { color: var(--link-hover); }
+
+::selection { background: var(--sel-bg); color: var(--sel-fg); }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+h1, h2, h3, h4 {
+  line-height: var(--lh-tight);
+  text-wrap: balance;
+  margin: 0;
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: var(--sp-6) 0;
+}
+
+.container {
+  width: min(100% - 2.5rem, var(--w-page));
+  margin-inline: auto;
+}
+
+.prose { max-width: var(--w-prose); }
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  padding: var(--sp-2) var(--sp-4);
+  background: var(--accent);
+  color: #fff;
+  border-radius: 0 0 var(--r-sm) 0;
+  z-index: 100;
+}
+.skip-link:focus { left: 0; }
+
+.sep { color: var(--fg-muted); margin: 0 var(--sp-1); }
+
+.empty {
+  color: var(--fg-muted);
+  padding: var(--sp-6) 0;
+}
+
+/* 高亮标记：品牌色作为荧光笔底色，配近黑文字（17.9:1） */
+mark {
+  background: var(--mark-bg);
+  color: var(--mark-fg);
+  padding: 0.05em 0.3em;
+  border-radius: 0.25em;
+}
+
+
+/* ---------------------------------------------------------------------------
+   3. 页头
+   --------------------------------------------------------------------------- */
+
+.site-header {
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.site-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  min-height: 3.5rem;
+}
+
+.site-nav {
+  display: flex;
+  align-items: center;
+  /* 每一项自己带内边距，项与项之间的间距就调小一点，
+     否则六项加起来比原来宽出太多 */
+  gap: var(--sp-1);
+}
+.site-nav > a {
+  /* 边框一直占着位（未选中时是透明的），选中才显形
+     若改成只在选中时加边框，选中项一出现就会把旁边几项挤动一下 */
+  padding: var(--sp-1) var(--sp-3);
+  border: 1px solid transparent;
+  border-radius: var(--r-full);
+  font-size: var(--fs-sm);
+  color: var(--fg-muted);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color .15s ease, border-color .15s ease, background .15s ease;
+}
+.site-nav > a:hover { color: var(--link); }
+/* 当前所在的那个栏目，和 .term-link 用同一套视觉语言：圆角胶囊 + 描边 + 淡底
+   class 给眼睛看，模板里同时写的 aria-current 给读屏软件听 */
+.site-nav > a.is-active {
+  color: var(--link);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.theme-toggle {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition: color .15s ease, border-color .15s ease, background .15s ease;
+}
+.theme-toggle:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.theme-toggle svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.theme-toggle .icon-sun { display: none; }
+:root[data-theme="dark"] .theme-toggle .icon-sun  { display: block; }
+:root[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+
+
+/* ---------------------------------------------------------------------------
+   4. 页脚
+   --------------------------------------------------------------------------- */
+
+.site-footer {
+  margin-top: var(--sp-8);
+  border-top: 1px solid var(--border);
+  padding: var(--sp-5) 0;
+  color: var(--fg-muted);
+  font-size: var(--fs-sm);
+}
+.site-footer-inner {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+.site-footer p { margin: 0; }
+
+
+/* ---------------------------------------------------------------------------
+   5. 首页身份区
+   --------------------------------------------------------------------------- */
+
+.identity {
+  padding: var(--sp-8) 0 var(--sp-6);
+}
+
+/* 薄荷色标记条：品牌色的主要出场位置之一 */
+/* 首页头像，图片放在 assets/avatar.* 就自动出现；
+   没有该文件时显示的是下面那条薄荷色小横条（两者互斥）
+   阴影和文章卡片用同一组变量，保持一致 */
+.identity-avatar {
+  display: block;
+  width: 9rem;                 /* 144px，配 288px 的源图，高清屏不虚 */
+  height: 9rem;
+  object-fit: cover;           /* 非正方形图片按中心裁成正方形 */
+  border-radius: var(--r-full);
+  margin-bottom: var(--sp-5);
+  background: var(--card-bg);  /* 透明 PNG 或加载中时不至于露出空白 */
+  box-shadow: 0 0 0 1px var(--border),
+              0 1px 2px var(--shadow-c-soft),
+              0 6px 20px var(--shadow-c-brand);
+}
+
+.identity-mark {
+  display: block;
+  width: 3.5rem;
+  height: 0.5rem;
+  border-radius: var(--r-full);
+  background: var(--brand-mint);
+  margin-bottom: var(--sp-4);
+}
+
+.identity-name {
+  font-size: var(--fs-4xl);
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: var(--accent);
+}
+
+.identity-bio {
+  margin: var(--sp-3) 0 0;
+  font-size: var(--fs-lg);
+  color: var(--fg-muted);
+  max-width: 34rem;
+}
+
+.identity-links {
+  margin: var(--sp-4) 0 0;
+  font-size: var(--fs-sm);
+}
+.identity-links a {
+  color: var(--fg-muted);
+  text-decoration: none;
+}
+.identity-links a:hover {
+  color: var(--link);
+  text-decoration: underline;
+}
+
+
+/* ---------------------------------------------------------------------------
+   6. 分区与卡片网格
+   --------------------------------------------------------------------------- */
+
+.area { margin-top: var(--sp-7); }
+
+.area-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-4);
+  padding-bottom: var(--sp-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.area-title {
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.area-desc {
+  margin: var(--sp-1) 0 0;
+  font-size: var(--fs-sm);
+  color: var(--fg-muted);
+}
+
+.area-more {
+  font-size: var(--fs-sm);
+  color: var(--link);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.area-more:hover { text-decoration: underline; }
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: var(--sp-4);
+}
+
+
+/* ---------------------------------------------------------------------------
+   7. 卡片 + 3D 倾斜
+   --------------------------------------------------------------------------- */
+
+/* perspective 必须放在外层容器上
+   如果把 perspective() 直接写进卡片自己的 transform，
+   卡片在网格中的位置不同会导致透视歪掉 */
+.card-tilt { perspective: 600px; }
+
+.card {
+  position: relative;
+  height: 100%;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--r-md);
+  box-shadow: 0 1px 2px var(--shadow-c-soft), 0 6px 20px var(--shadow-c-brand);
+  transition: transform .28s cubic-bezier(.2, .7, .3, 1),
+              box-shadow .28s ease,
+              border-color .28s ease;
+}
+
+/* 跟随鼠标期间关掉 transition，否则角度会“追”不上光标 */
+.card.is-tilting {
+  transition: none;
+  border-color: var(--accent);
+  box-shadow: 0 12px 34px var(--shadow-c-brand), 0 2px 8px var(--shadow-c-soft);
+}
+
+/* 跟随光标的高光，位置由 tilt.js 写入 --mx / --my */
+.card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .28s ease;
+  background: radial-gradient(
+    22rem circle at var(--mx, 50%) var(--my, 50%),
+    var(--glow),
+    transparent 60%
+  );
+}
+.card.is-tilting::after { opacity: 1; }
+
+.card-link {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  height: 100%;
+  padding: var(--sp-4) var(--sp-4) var(--sp-3);
+  text-decoration: none;
+  color: inherit;
+  border-radius: inherit;
+}
+
+.card-cat {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  /* 小字号只能用 --link（5.42:1）；--accent 在浅色下只有 3.24:1，不够 */
+  color: var(--link);
+}
+
+.card-title {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--fg);
+  transition: color .15s ease;
+}
+.card:hover .card-title { color: var(--accent); }
+
+.card-summary {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-snug);
+  color: var(--fg-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.card-meta {
+  margin-top: auto;
+  padding-top: var(--sp-2);
+  font-size: var(--fs-xs);
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+
+/* ---------------------------------------------------------------------------
+   8. 列表页 / 分类总览 / 归档
+   --------------------------------------------------------------------------- */
+
+.page-head {
+  padding: var(--sp-7) 0 var(--sp-4);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--sp-5);
+}
+
+.page-kicker {
+  margin: 0 0 var(--sp-1);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+
+.page-title {
+  font-size: var(--fs-3xl);
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: var(--accent);
+}
+
+.page-desc {
+  margin-top: var(--sp-3);
+  color: var(--fg-muted);
+  font-size: var(--fs-sm);
+}
+
+/* 分类 / 标签总览 */
+.term-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+}
+.term-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-full);
+  background: var(--bg-elev);
+  font-size: var(--fs-sm);
+  color: var(--fg);
+  text-decoration: none;
+  transition: border-color .15s ease, color .15s ease, background .15s ease;
+}
+.term-link:hover {
+  border-color: var(--accent);
+  color: var(--link);
+  background: var(--accent-soft);
+}
+.term-count {
+  font-size: var(--fs-xs);
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 归档：刻意不用卡片，一屏扫几十条 */
+.archive-year { margin-bottom: var(--sp-6); }
+
+.archive-year-title {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.archive-year-count {
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  color: var(--fg-muted);
+  padding: 0.1em 0.5em;
+  border: 1px solid var(--border);
+  border-radius: var(--r-full);
+}
+
+.archive-list {
+  list-style: none;
+  margin: var(--sp-3) 0 0;
+  padding: 0;
+}
+
+.archive-item {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-4);
+  padding: var(--sp-2) 0;
+  border-bottom: 1px solid var(--border);
+}
+.archive-item:last-child { border-bottom: 0; }
+
+.archive-date {
+  flex: none;
+  width: 3.25rem;
+  font-size: var(--fs-sm);
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.archive-link {
+  flex: 1;
+  min-width: 0;
+  color: var(--fg);
+  text-decoration: none;
+}
+.archive-link:hover { color: var(--accent); text-decoration: underline; }
+
+.archive-cat {
+  flex: none;
+  font-size: var(--fs-xs);
+  color: var(--link);
+}
+
+
+/* ---------------------------------------------------------------------------
+   9. 分页
+   --------------------------------------------------------------------------- */
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  margin-top: var(--sp-6);
+  padding-top: var(--sp-5);
+  border-top: 1px solid var(--border);
+}
+
+.page-btn {
+  display: inline-block;
+  padding: var(--sp-2) var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-sm);
+  color: var(--link);
+  text-decoration: none;
+  transition: border-color .15s ease, background .15s ease;
+}
+.page-btn:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.page-btn.is-disabled {
+  color: var(--fg-muted);
+  opacity: 0.45;
+}
+
+.page-info {
+  font-size: var(--fs-sm);
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+
+/* ---------------------------------------------------------------------------
+   10. 文章页
+   --------------------------------------------------------------------------- */
+
+.post { padding-top: var(--sp-7); }
+
+.post-head {
+  padding-bottom: var(--sp-5);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--sp-6);
+}
+
+.post-cats {
+  margin: 0 0 var(--sp-2);
+  display: flex;
+  gap: var(--sp-3);
+}
+.post-cat {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--link);
+  text-decoration: none;
+}
+.post-cat:hover { text-decoration: underline; }
+
+.post-title {
+  font-size: var(--fs-3xl);
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: var(--accent);
+}
+
+.post-lede {
+  margin: var(--sp-3) 0 0;
+  font-size: var(--fs-lg);
+  color: var(--fg-muted);
+}
+
+.post-meta {
+  margin: var(--sp-4) 0 0;
+  font-size: var(--fs-sm);
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+.post-tags a {
+  color: var(--fg-muted);
+  text-decoration: none;
+  margin-right: var(--sp-2);
+}
+.post-tags a:hover { color: var(--link); text-decoration: underline; }
+
+.post-foot {
+  margin-top: var(--sp-7);
+  padding-top: var(--sp-5);
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-sm);
+}
+
+/* 评论区（giscus），里面那个 iframe 是跨域的，样式一概够不着，
+   能控制的只有外面这层外壳，所以这里只管间距和标题 */
+.comments {
+  margin-top: var(--sp-7);
+  padding-top: var(--sp-5);
+  border-top: 1px solid var(--border);
+}
+.comments-title {
+  margin-bottom: var(--sp-4);
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  color: var(--accent);
+}
+/* 只在本地预览出现的「还没配置」提示，线上不会渲染 */
+.comments-todo p {
+  font-size: var(--fs-sm);
+  color: var(--fg-muted);
+}
+.comments-todo code {
+  padding: .12em .36em;
+  border: 1px solid var(--border);
+  border-radius: .3em;
+  background: var(--code-bg);
+  color: var(--code-fg);
+  font-family: var(--font-mono);
+  font-size: .9em;
+}
+
+/* ---- 正文排版 ---- */
+
+.post-body > * + * { margin-top: var(--sp-5); }
+
+.post-body h2 {
+  margin-top: var(--sp-7);
+  padding-bottom: var(--sp-2);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+  color: var(--accent);
+  scroll-margin-top: 4.5rem;
+}
+
+.post-body h3 {
+  margin-top: var(--sp-6);
+  font-size: var(--fs-xl);
+  font-weight: 650;
+  color: var(--accent);
+  scroll-margin-top: 4.5rem;
+}
+
+.post-body h4 {
+  margin-top: var(--sp-5);
+  font-size: var(--fs-lg);
+  font-weight: 650;
+  color: var(--fg);
+}
+
+.post-body ul,
+.post-body ol { padding-left: 1.5rem; }
+.post-body li + li { margin-top: var(--sp-2); }
+.post-body li > ul,
+.post-body li > ol { margin-top: var(--sp-2); }
+
+.post-body blockquote {
+  margin-inline: 0;
+  padding: var(--sp-3) var(--sp-4);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  background: var(--accent-soft);
+  color: var(--fg-muted);
+  font-size: var(--fs-sm);
+}
+.post-body blockquote > * + * { margin-top: var(--sp-3); }
+.post-body blockquote p { margin: 0; }
+
+.post-body img {
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+}
+
+.post-body a { text-decoration: underline; }
+.post-body a:hover { color: var(--link-hover); }
+
+/* 行内代码 */
+.post-body code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  padding: 0.12em 0.36em;
+  border-radius: 0.3em;
+  background: var(--code-bg);
+  color: var(--code-fg);
+  border: 1px solid var(--border);
+}
+
+.post-body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+.post-body th,
+.post-body td {
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border);
+  text-align: left;
+}
+.post-body th {
+  background: var(--bg-sunken);
+  font-weight: 650;
+}
+
+/* 目录 */
+.toc {
+  margin-bottom: var(--sp-6);
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg-sunken);
+  font-size: var(--fs-sm);
+}
+.toc summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--fg-muted);
+}
+.toc ul {
+  margin: var(--sp-3) 0 0;
+  padding-left: 1.25rem;
+}
+.toc a {
+  color: var(--fg-muted);
+  text-decoration: none;
+}
+.toc a:hover { color: var(--link); text-decoration: underline; }
+
+
+/* ---------------------------------------------------------------------------
+   11. 代码块
+
+   底色与左边框用品牌色，让代码块一眼看过去属于这个站点；
+   但 token 保留多色相 —— 只有两个色相的话，变量 / 字符串 / 函数名
+   就分不出来了，长代码块会变得没法读
+   --------------------------------------------------------------------------- */
+
+.post-body pre,
+.chroma {
+  position: relative;
+  margin: 0;
+  padding: var(--sp-4);
+  overflow-x: auto;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-snug);
+}
+
+/* 复制按钮的定位层，由 assets/js/copy.js 现包在 <pre> 外面
+   按钮不能直接塞进 <pre> 里：<pre> 是横向滚动的容器，
+   塞进去按钮会跟着代码一起滚走 */
+.code-wrap {
+  position: relative;
+}
+
+.code-wrap pre {
+  /* 给右上角的按钮让出位置，否则长代码行的右端会被按钮压住 */
+  padding-right: 3.5rem;
+}
+
+.code-copy {
+  position: absolute;
+  top: var(--sp-2);
+  right: var(--sp-2);
+  padding: 0.2rem 0.5rem;
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  line-height: 1.4;
+  color: var(--fg-muted);
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+
+.code-copy:hover {
+  color: var(--link);
+  border-color: var(--accent);
+}
+
+/* 复制成功后的短暂反馈 */
+.code-copy.is-copied {
+  color: var(--t-string);
+  border-color: var(--t-string);
+}
+
+.post-body pre code {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--code-fg);
+  font-size: inherit;
+}
+
+.chroma code { background: none; border: 0; padding: 0; }
+
+/* Chroma 的 token 类 */
+.chroma .k, .chroma .kc, .chroma .kd, .chroma .kn,
+.chroma .kp, .chroma .kr, .chroma .kt        { color: var(--t-keyword); font-weight: 600; }
+/* 预处理指令要单独列出来，不能跟着注释走
+   Chroma 把 #include 归在 Comment Preproc（.cp）里，于是默认继承了注释那一套
+   灰色 + 斜体，可它根本不是注释，整个 #include<iostream> 灰成一团之后看着像被
+   注释掉了，和 VS Code / GitHub 里那种醒目的观感也对不上
+   所以改成按指令对待：用关键字的颜色，但不加粗，因为 .cp 这一个是把
+   #include 和后面的 <iostream> 整个包在一起的，加粗会让整行发重 */
+.chroma .cp, .chroma .cpf                    { color: var(--t-keyword); }
+.chroma .s, .chroma .sa, .chroma .sb, .chroma .sc, .chroma .dl,
+.chroma .sd, .chroma .se, .chroma .sh, .chroma .si, .chroma .sx,
+.chroma .sr, .chroma .s1, .chroma .s2, .chroma .ss { color: var(--t-string); }
+.chroma .c, .chroma .ch, .chroma .cm, .chroma .c1,
+.chroma .cs                                   { color: var(--t-comment); font-style: italic; }
+.chroma .m, .chroma .mb, .chroma .mf, .chroma .mh,
+.chroma .mi, .chroma .mo, .chroma .il         { color: var(--t-number); }
+.chroma .nf, .chroma .fm, .chroma .nd, .chroma .nc,
+.chroma .ne, .chroma .nl, .chroma .nn         { color: var(--t-func); }
+.chroma .nb, .chroma .bp, .chroma .no,
+.chroma .nv, .chroma .vc, .chroma .vg, .chroma .vi { color: var(--t-builtin); }
+.chroma .n, .chroma .na, .chroma .ni, .chroma .nt,
+.chroma .nx, .chroma .py, .chroma .go          { color: var(--t-name); }
+.chroma .o, .chroma .ow, .chroma .p           { color: var(--t-punct); }
+.chroma .err                                 { color: var(--t-error); }
+.chroma .gd                                  { color: var(--t-error); }
+.chroma .gi                                  { color: var(--t-string); }
+.chroma .ln, .chroma .lnt                    { color: var(--t-comment); }
+.chroma .hl                                  { background: var(--accent-soft); display: block; }
+
+
+/* ---------------------------------------------------------------------------
+   12. 404
+   --------------------------------------------------------------------------- */
+
+.notfound {
+  padding: var(--sp-8) 0;
+  text-align: center;
+}
+.notfound-code {
+  margin: 0;
+  font-size: 5rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: var(--brand-mint);
+  -webkit-text-stroke: 2px var(--accent);
+}
+.notfound-title {
+  margin-top: var(--sp-4);
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+  color: var(--accent);
+}
+.notfound-desc {
+  margin-top: var(--sp-3);
+  color: var(--fg-muted);
+}
+.notfound-actions {
+  margin-top: var(--sp-5);
+  display: flex;
+  justify-content: center;
+  gap: var(--sp-3);
+}
+
+.btn {
+  display: inline-block;
+  padding: var(--sp-2) var(--sp-5);
+  border: 1px solid var(--accent);
+  border-radius: var(--r-sm);
+  background: var(--accent);
+  color: #fff;
+  font-size: var(--fs-sm);
+  text-decoration: none;
+  transition: opacity .15s ease;
+}
+.btn:hover { color: #fff; opacity: .88; }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--link);
+  border-color: var(--border-strong);
+}
+.btn-ghost:hover { color: var(--link); border-color: var(--accent); }
+
+
+/* ---------------------------------------------------------------------------
+   13. 响应式 / 动效偏好 / 打印
+   --------------------------------------------------------------------------- */
+
+@media (max-width: 40rem) {
+  :root {
+    --fs-3xl: 1.75rem;
+    --fs-4xl: 2.125rem;
+  }
+  .identity { padding-top: var(--sp-6); }
+  .card-grid { grid-template-columns: 1fr; }
+  .site-header-inner { gap: var(--sp-2); }
+  /* 窄屏先把桌面那套「间距 + 内边距」收掉，省下的宽度留给文字本身
+     375px 的机器到这一步就够了（六项约 264px，装得下）
+
+     但 320px 的老机器仍然装不下六个胶囊，所以再允许折行——
+     宁可页头高一点，也不要横向溢出把右侧的切换按钮顶出屏幕
+     `min-width:0` 是必须的：flex 项默认不肯缩到内容宽度以下，
+     不写这行，flex-wrap 永远轮不到生效 */
+  .site-nav {
+    gap: 0;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+  .site-nav > a { padding-inline: var(--sp-2); }
+  .area-head { flex-direction: column; align-items: flex-start; }
+  .archive-item { gap: var(--sp-3); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+  .card { transition: none; }
+}
+
+@media print {
+  .site-header, .site-footer, .pagination, .toc, .card::after,
+  .code-copy { display: none; }
+  body { background: #fff; color: #000; }
+  a { color: #000; }
+}

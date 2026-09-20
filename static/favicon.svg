@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="jiajia-jun">
+  <defs>
+    <linearGradient id="t" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#A1FEEF"/>
+      <stop offset="1" stop-color="#658AE4"/>
+    </linearGradient>
+  </defs>
+  <rect width="100" height="100" rx="22" fill="url(#t)"/>
+  <path d="M74 23.26L74 52.74A24 24 0 1 1 26 52.74" fill="none" stroke="#0E1626" stroke-width="21.52"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

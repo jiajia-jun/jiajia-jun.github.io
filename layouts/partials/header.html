@@ -1,0 +1,27 @@
+<header class="site-header">
+  <div class="container site-header-inner">
+    {{- /* 导航，主页也排在这一行里（原来它单独摆在最左边），
+           这样六个栏目是一组平级的入口，选中框套在谁身上都说得通
+
+           active 用「当前网址前缀」判断，而不是比对栏目名：
+           分类 / 标签页的 Kind 是 taxonomy / term，文章页是 page，
+           靠 Kind 得写一串分支；前缀比较对分页页（/posts/page/2/）
+           也天然成立 */}}
+    {{- $here := .RelPermalink }}
+    {{- $nav := slice
+          (dict "href" ("/"           | relURL) "label" "主页" "active" .IsHome)
+          (dict "href" ("/posts/"     | relURL) "label" "文章" "active" (hasPrefix $here ("/posts/" | relURL)))
+          (dict "href" ("/categories/" | relURL) "label" "分类" "active" (hasPrefix $here ("/categories/" | relURL)))
+          (dict "href" ("/tags/"      | relURL) "label" "标签" "active" (hasPrefix $here ("/tags/" | relURL)))
+          (dict "href" ("/archives/"  | relURL) "label" "归档" "active" (hasPrefix $here ("/archives/" | relURL)))
+          (dict "href" ("/about/"     | relURL) "label" "关于" "active" (hasPrefix $here ("/about/" | relURL))) }}
+    <nav class="site-nav" aria-label="主导航">
+      {{- range $nav }}
+      {{- /* class 负责画选中框，aria-current 让读屏软件也知道当前在哪一栏
+             两个都要：只有 class 的话，视觉和无障碍会脱节 */}}
+      <a href="{{ .href }}"{{ if .active }} class="is-active" aria-current="page"{{ end }}>{{ .label }}</a>
+      {{- end }}
+    </nav>
+    {{ partial "theme-toggle.html" . }}
+  </div>
+</header>

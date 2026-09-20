@@ -1,0 +1,37 @@
+{{- /* 归档页：按年份分组、紧凑列表
+       这里刻意不用卡片 —— 卡片适合「逛」，归档适合「找」，
+       一屏能扫几十条才是这个页面的价值 */ -}}
+{{ define "main" }}
+<div class="container">
+  <header class="page-head">
+    <h1 class="page-title">{{ .Title }}</h1>
+    {{- with .Content }}
+    <div class="page-desc">{{ . }}</div>
+    {{- end }}
+  </header>
+
+  {{- $sections := site.Params.mainSections | default (slice "posts") }}
+  {{- $pages := where site.RegularPages "Section" "in" $sections }}
+
+  {{- if $pages }}
+  {{- range $pages.ByDate.Reverse.GroupByDate "2006" }}
+  <section class="archive-year">
+    <h2 class="archive-year-title">{{ .Key }}<span class="archive-year-count">{{ len .Pages }}</span></h2>
+    <ul class="archive-list">
+      {{- range .Pages }}
+      <li class="archive-item">
+        <time class="archive-date" datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format "01-02" }}</time>
+        <a class="archive-link" href="{{ .RelPermalink }}">{{ .Title }}</a>
+        {{- with .GetTerms "categories" }}
+        <span class="archive-cat">{{ (index . 0).LinkTitle }}</span>
+        {{- end }}
+      </li>
+      {{- end }}
+    </ul>
+  </section>
+  {{- end }}
+  {{- else }}
+  <p class="empty">还没有文章</p>
+  {{- end }}
+</div>
+{{ end }}

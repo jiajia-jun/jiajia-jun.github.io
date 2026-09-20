@@ -1,0 +1,25 @@
+<section class="identity container">
+  {{- /* 头像，图片放到 assets/ 下、文件名以 avatar 开头即可
+         （avatar.jpg / avatar.png / avatar.webp 都认），
+         不用改任何配置，原图最好是不小于 288×288 的正方形；
+         不是正方形也没关系，下面会按中心裁
+         没有这个文件时退回原来那条薄荷色小横条，
+         所以现在不放图也不会出错 */ -}}
+  {{- with resources.GetMatch "avatar.*" }}
+  {{- $av := .Fill "288x288 Center" }}
+  {{- /* alt 留空：名字就在下面，头像属于装饰，读屏重复念一遍反而吵 */ -}}
+  <img class="identity-avatar" src="{{ $av.RelPermalink }}"
+       width="144" height="144" alt="" decoding="async">
+  {{- else }}
+  <span class="identity-mark" aria-hidden="true"></span>
+  {{- end }}
+  <h1 class="identity-name">{{ site.Title }}</h1>
+  {{- with site.Params.bio }}
+  <p class="identity-bio">{{ . }}</p>
+  {{- end }}
+  <p class="identity-links">
+    {{- with site.Params.github }}
+    <a href="{{ . }}">GitHub</a>
+    {{- end }}
+  </p>
+</section>

@@ -1,0 +1,57 @@
+{{ define "main" }}
+<article class="post container prose">
+  <header class="post-head">
+    {{- with .GetTerms "categories" }}
+    <p class="post-cats">
+      {{- range . }}
+      <a class="post-cat" href="{{ .RelPermalink }}">{{ .LinkTitle }}</a>
+      {{- end }}
+    </p>
+    {{- end }}
+
+    <h1 class="post-title">{{ .Title }}</h1>
+
+    <p class="post-meta">
+      <time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format "2006-01-02" }}</time>
+      {{- with .GetTerms "tags" }}
+      <span class="sep" aria-hidden="true">·</span>
+      <span class="post-tags">
+        {{- range . }}
+        <a href="{{ .RelPermalink }}">#{{ .LinkTitle }}</a>
+        {{- end }}
+      </span>
+      {{- end }}
+    </p>
+  </header>
+
+  {{- /* 只有文章里真的写了 h2 / h3 时才会出现这个框
+       （summary 上显示的是「导航」，但它取的是 Hugo 的 TableOfContents，
+       所以下面继续按它的本名叫「目录」）
+       判据不能用 `with .TableOfContents`，也不能用 len：
+       没有可用标题时 Hugo 返回的不是空字符串，而是
+       `<nav id="TableOfContents"></nav>` 这样一个空壳，
+       `with` 判断永远成立，页面上就出现一个点开什么都没有的目录。
+       只有 h1（被 startLevel=2 排除）或只有 h4（被 endLevel=3 排除）时
+       返回的壳里还会多套几层空 <ul>，所以数长度也判不准。
+       唯一和「目录真有内容」等价的信号，是它里面有没有链接。 */}}
+  {{- $toc := .TableOfContents }}
+  {{- if strings.Contains $toc "<a href" }}
+  <details class="toc">
+    <summary>导航</summary>
+    {{ $toc }}
+  </details>
+  {{- end }}
+
+  <div class="post-body">
+    {{ .Content }}
+  </div>
+
+  <footer class="post-foot">
+    <a href="{{ "/posts/" | relURL }}">← 全部文章</a>
+  </footer>
+
+  {{- /* 评论区放在文章内部：这样能直接继承 article 上的 container / prose，
+         评论框的宽度和正文一致，不用再包一层 */}}
+  {{ partial "comments.html" . }}
+</article>
+{{ end }}

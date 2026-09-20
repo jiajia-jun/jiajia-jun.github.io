@@ -1,0 +1,173 @@
+# ============================================================================
+#  站点基础配置
+# ============================================================================
+
+baseURL      = "https://jiajia-jun.github.io/"
+title        = "jiajia-jun"
+
+# 注意：Hugo 0.158 起 languageCode 已弃用，改用 locale。
+locale = "zh-cn"
+defaultContentLanguage = "zh-cn"
+
+# 时区必须显式设置。不设的话 Hugo 按 UTC 计算日期，
+# 晚上（北京时间 08:00 之前）写的文章会被算成前一天。
+timeZone = "Asia/Shanghai"
+
+# 中文按字统计。不开这个的话 Hugo 按空格切词，
+# 中文摘要会被切得乱七八糟（按空格算，一整句只算一个词）。
+hasCJKLanguage = true
+
+# 自动摘要的长度（开了 hasCJKLanguage 后，中文按字计）
+summaryLength = 80
+
+enableRobotsTXT = true
+
+# 关闭 git 信息。开启后能显示「最后更新于」，
+# 但 CI 必须 fetch-depth: 0 拉取全量历史，会拖慢构建。
+enableGitInfo = false
+
+# 注意：故意不设置 theme。
+# 本项目使用自建主题：模板在 layouts/，样式在 assets/。
+
+
+# ============================================================================
+#  分页
+# ============================================================================
+
+[pagination]
+  # /posts/ 与各分类页每页显示的文章数
+  pagerSize = 12
+
+
+# ============================================================================
+#  URL 结构
+# ============================================================================
+
+[permalinks]
+  # 文章 URL 形如 /posts/git-notes/ —— 取的是**目录名**，不是标题。
+  #
+  # 必须用 :contentbasename 而不是 :slug。
+  # Hugo 的 .Slug 在没有显式设置时是从**标题**派生的，
+  # 于是「git 常用操作」会被转成 /posts/git-常用操作/，中文就进了 URL。
+  # :contentbasename 取的是 bundle 目录名，稳定为 ASCII。
+  posts = "/posts/:contentbasename/"
+
+
+# ============================================================================
+#  分类与标签
+# ============================================================================
+
+[taxonomies]
+  # 首页「按类型分区」用的就是 category
+  category = "categories"
+  tag      = "tags"
+
+
+# ============================================================================
+#  Markdown 渲染
+# ============================================================================
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      # 允许正文里直接写 HTML（例如 <details>、<kbd>、自定义 <div>）
+      # 本站是单人写作，不存在不受信任的稿件，所以开启。
+      unsafe = true
+
+    [markup.goldmark.extensions]
+      # 必须关掉。这个排版替换器会静默改写正文：
+      #   --amend  →  &ndash;amend   （双连字符变成短破折号 –）
+      #   ...      →  &hellip;       （三个点变成省略号 …）
+      #   "引号"   →  弯引号
+      # 对写命令的博客是致命的：读者复制走的就是错的字符，
+      # 而且在编辑器里看不出来，只有渲染后才发现。
+      # 需要破折号或省略号时，直接打 — 和 … 就行。
+      typographer = false
+
+  [markup.highlight]
+    # 用 CSS 类而非内联样式，配色才能在 assets/css/main.css 里统一控制
+    noClasses   = false
+    lineNos     = false
+    tabWidth    = 2
+    guessSyntax = true
+
+  [markup.tableOfContents]
+    startLevel = 2
+    endLevel   = 3
+
+
+# ============================================================================
+#  输出格式
+# ============================================================================
+
+# 只输出 HTML，也就是关掉了 RSS。
+#
+# 注意：不能图省事直接把这一整段删掉。Hugo 的默认值是
+# home / section / taxonomy / term 都带 "RSS"，
+# 删掉这段等于恢复默认，订阅源会自己长回来。
+[outputs]
+  home     = ["HTML"]
+  section  = ["HTML"]
+  taxonomy = ["HTML"]
+  term     = ["HTML"]
+
+
+# ============================================================================
+#  站点参数（模板里通过 site.Params.xxx 读取）
+# ============================================================================
+
+[params]
+  description = "jiajiajun 的个人博客"
+  author      = "jiajia-jun"
+
+  # 哪些 section 算「文章」。归档页、首页分区都用它来筛选，
+  # 这样 content/about/ 之类的独立页面不会被混进文章列表。
+  mainSections = ["posts"]
+
+  # 首页身份区站名下面那行
+  bio = "你好，我是jiajiajun，欢迎来到我的博客"
+  github = "https://github.com/jiajia-jun"
+
+  # 首页每个分类分区展示几篇文章，超出部分靠「查看全部 →」
+  homePostsPerCategory = 4
+
+  # ---- 评论（giscus）--------------------------------------------------------
+  # 评论存在**本仓库的 GitHub Discussions** 里，页面上的评论框是 giscus
+  # 提供的 iframe。读者必须用 GitHub 账号登录才能发言。
+  # 下面两个 ID 不是名字，是 GitHub 内部的 ID，只能从 https://giscus.app 抄：
+  # 在 giscus.app 里填上仓库名（jiajia-jun/jiajia-jun.github.io），
+  # 它会直接生成一段带 data-repo-id / data-category-id 的代码，抄过来即可。
+  # 为什么必须是 R_kgDO... / DIC_kwDO... 这种字符串：
+  # giscus 要的是 GraphQL 的 node ID。REST 接口返回的纯数字 id
+  # （本仓库是 1264159460）填进去**不会报错**，但评论区会一直空的，极难排查。
+  # categoryId 没填之前，文章页不会渲染评论区（模板自动跳过），站点照常构建。
+  
+  [params.giscus]
+    repo     = "jiajia-jun/jiajia-jun.github.io"
+    repoId   = "R_kgDOS1mK5A"
+
+    # Announcements 是打开 Discussions 时 GitHub 自动建好的分类，不用自己再建。
+    # 选它还有个好处：这个分类只有维护者能**新建**讨论，
+    # 所以别人没法往你的 Discussions 里灌无关的帖子；读者照样能在下面评论。
+    #
+    # 如果你在 giscus.app 上选了别的分类，这里的名字要跟着改，两边必须一致。
+    category   = "Announcements"
+    categoryId = "DIC_kwDOS1mK5M4DF_6l"
+
+    # pathname：一个页面一条讨论。用 pathname 而不是 url，
+    # 这样以后绑了自定义域名，已有评论也不会跟丢。
+    mapping = "pathname"
+
+    # strict=0 是 giscus 自己的默认值，也宽松些：
+    # 打开（=1）要求讨论标题和 pathname 完全一致，一旦 giscus 的标题
+    # 生成规则和你想的不一样，评论区会永远匹配不上、静默地空着。
+    # 博客的 pathname 天然唯一，宽松匹配不会串页。
+    strict = "0"
+
+    reactionsEnabled = "1"
+    inputPosition    = "top"
+    lang             = "zh-CN"
+
+    # lazy：评论框在页面最底部，滚动到附近才加载 iframe。
+    # 没滚到底的读者就不用为它付流量。
+    loading = "lazy"

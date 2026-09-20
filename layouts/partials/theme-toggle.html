@@ -1,0 +1,11 @@
+{{- /* 渐进增强：先渲染成 hidden，由 theme.js 取消隐藏
+       若 JS 被禁用或脚本加载失败，用户不会看到一个点了没反应的死按钮 */ -}}
+<button class="theme-toggle" type="button" hidden aria-label="切换深色 / 浅色模式">
+  <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path d="M20.6 14.4A8.6 8.6 0 0 1 9.6 3.4a8.6 8.6 0 1 0 11 11Z"/>
+  </svg>
+  <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <circle cx="12" cy="12" r="4.1"/>
+    <path d="M12 2.4v2.3M12 19.3v2.3M2.4 12h2.3M19.3 12h2.3M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6"/>
+  </svg>
+</button>

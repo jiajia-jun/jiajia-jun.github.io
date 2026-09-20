@@ -1,0 +1,51 @@
+{{ define "main" }}
+  {{ partial "identity.html" . }}
+
+  {{- $per := site.Params.homePostsPerCategory | default 4 }}
+
+  {{- /* 把 categories 收集成可排序的切片
+         排序依据是各 term 页面 _index.md 里的 weight，
+         这样分区顺序由 content/categories/<名称>/_index.md 控制，
+         不受 Hugo 默认的「按文章数排序」干扰 */ -}}
+  {{- $areas := slice }}
+  {{- range $term, $weighted := site.Taxonomies.categories }}
+    {{- $termPage := site.GetPage (printf "/categories/%s" $term) }}
+    {{- $weight := 999 }}
+    {{- $desc := "" }}
+    {{- with $termPage }}
+      {{- with .Params.weight }}{{ $weight = . }}{{ end }}
+      {{- $desc = .Description }}
+    {{- end }}
+    {{- $areas = $areas | append (dict
+          "term"   $term
+          "pages"  $weighted
+          "weight" $weight
+          "desc"   $desc
+          "page"   $termPage) }}
+  {{- end }}
+
+  {{- if not $areas }}
+    <div class="container">
+      <p class="empty">还没有文章。在 <code>content/posts/</code> 下新建一篇就会出现在这里。</p>
+    </div>
+  {{- end }}
+
+  {{- range sort $areas "weight" "asc" }}
+  <section class="area container">
+    <header class="area-head">
+      <div>
+        <h2 class="area-title">{{ .term }}</h2>
+        {{- with .desc }}<p class="area-desc">{{ . }}</p>{{ end }}
+      </div>
+      {{- with .page }}
+      <a class="area-more" href="{{ .RelPermalink }}">查看全部 <span aria-hidden="true">→</span></a>
+      {{- end }}
+    </header>
+    <div class="card-grid">
+      {{- range first $per .pages.Pages.ByDate.Reverse }}
+      {{ partial "card.html" . }}
+      {{- end }}
+    </div>
+  </section>
+  {{- end }}
+{{ end }}

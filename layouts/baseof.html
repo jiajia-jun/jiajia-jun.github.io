@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="{{ site.Language.Locale | default "zh-cn" }}">
+<head>
+  {{- /* charset / viewport 都写在 head.html 里，这里不要重复
+         一个文档只能声明一次字符编码，重复声明是不合法的
+         （注释里故意不写出标签原文，否则 HTML 检查工具会把注释内容
+         也当成真的标签来报错，） */}}
+  {{ partial "head.html" . }}
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到正文</a>
+  {{ partial "header.html" . }}
+  <main id="main">
+    {{ block "main" . }}{{ end }}
+  </main>
+  {{ partial "footer.html" . }}
+
+  {{- $js := slice (resources.Get "js/theme.js") (resources.Get "js/tilt.js")
+                       (resources.Get "js/comments.js") (resources.Get "js/copy.js")
+        | resources.Concat "js/main.js" | minify | fingerprint }}
+  <script src="{{ $js.RelPermalink }}" integrity="{{ $js.Data.Integrity }}" defer></script>
+</body>
+</html>

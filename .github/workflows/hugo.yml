@@ -1,0 +1,58 @@
+name: 构建并部署到 GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  # 允许在 Actions 页面手动点一下触发
+  workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read   # 读仓库
+  pages: write     # 写 Pages
+  id-token: write  # deploy-pages 需要用它换取 OIDC 凭据
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      HUGO_VERSION: 0.163.0
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v7
+
+      - name: 安装 Hugo
+        uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: ${{ env.HUGO_VERSION }}
+          extended: true
+
+      - name: 读取 Pages 配置
+        id: pages
+        uses: actions/configure-pages@v6
+
+      - name: 渲染站点
+        env:
+          BASE_URL: ${{ steps.pages.outputs.base_url }}
+        run: |
+          hugo --gc --minify --baseURL "${BASE_URL}/"
+
+      - name: 上传产物
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: ./public
+          retention-days: 1
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: 发布
+        id: deployment
+        uses: actions/deploy-pages@v5

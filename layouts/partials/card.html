@@ -1,0 +1,23 @@
+{{- /* 文章卡片
+       .card-tilt 提供 perspective（必须在外层，否则卡片在不同网格位置上
+       透视会歪）；真正的旋转施加在 .card 上，由 tilt.js 驱动 */ -}}
+<div class="card-tilt">
+  <article class="card">
+    <a class="card-link" href="{{ .RelPermalink }}">
+      {{- with .GetTerms "categories" }}
+      <span class="card-cat">{{ (index . 0).LinkTitle }}</span>
+      {{- end }}
+      <h3 class="card-title">{{ .Title }}</h3>
+      {{- /* 优先用作者手写的 description
+             自动摘要 .Summary 取的是正文开头，遇到文章以列表或引用开篇时
+             （比如 git 笔记），开头是「备注：以下内容中……」这种半截话，
+             当卡片摘要很难看，description 不存在时才退回自动摘要 */ -}}
+      {{- $desc := .Description }}
+      {{- if not $desc }}{{ $desc = .Summary | plainify | htmlUnescape }}{{ end }}
+      <p class="card-summary">{{ $desc }}</p>
+      <span class="card-meta">
+        <time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format "2006-01-02" }}</time>
+      </span>
+    </a>
+  </article>
+</div>

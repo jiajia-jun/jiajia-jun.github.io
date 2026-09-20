@@ -1,0 +1,28 @@
+{{- /* 分类总览 / 标签总览
+       用 .Data.Terms 而不是 .Pages，因为 .Data.Terms 自带按文章数降序，
+       能直接读到每个词条下有几篇 */ -}}
+{{ define "main" }}
+<div class="container">
+  <header class="page-head">
+    <h1 class="page-title">{{ .Title }}</h1>
+    {{- with .Content }}
+    <div class="page-desc">{{ . }}</div>
+    {{- end }}
+  </header>
+
+  {{- if .Data.Terms }}
+  <ul class="term-list">
+    {{- range .Data.Terms.ByCount }}
+    <li class="term-item">
+      <a class="term-link" href="{{ .Page.RelPermalink }}">
+        <span class="term-name">{{ .Page.LinkTitle }}</span>
+        <span class="term-count">{{ .Count }}</span>
+      </a>
+    </li>
+    {{- end }}
+  </ul>
+  {{- else }}
+  <p class="empty">还没有任何{{ .Title }}。</p>
+  {{- end }}
+</div>
+{{ end }}

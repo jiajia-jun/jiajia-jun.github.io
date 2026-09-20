@@ -1,0 +1,14 @@
+{
+  // 关掉 MD025 把 front matter 里的 title 也算成一级标题的行为
+  //
+  // 一篇文章的标题写在 front matter 的 `title` 里，模板会把它渲染成 <h1>，
+  // 但 markdownlint 默认把它也当成文档的一级标题，于是正文里再写一个
+  // `# 高精度乘法` 就成了「同一文档里有两个一级标题」，编辑器里报 MD025
+  //
+  // 把 front_matter_title 置空 = 让它别去 front matter 里找标题，
+  // MD025 就只数正文里的 `#`，正文真写了两个一级标题时照样会报，
+  // 规则本身并没有被关掉
+  "MD025": {
+    "front_matter_title": ""
+  }
+}

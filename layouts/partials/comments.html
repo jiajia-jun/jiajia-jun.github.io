@@ -1,0 +1,44 @@
+{{- /* giscus 评论区，配置在 hugo.toml 的 [params.giscus]
+
+       三个 ID 里 repoId / categoryId 缺一个就整个不渲染 —— 与其在页面上
+       挂一个永远加载不出来的空框，不如干脆不出现 */}}
+{{- $g := site.Params.giscus }}
+{{- if and $g $g.repo $g.repoId $g.categoryId }}
+<section class="comments" aria-labelledby="comments-title">
+  <h2 class="comments-title" id="comments-title">评论</h2>
+
+  {{- /* client.js 会把这个 div 替换成 iframe，所以脚本必须写在它后面 */}}
+  <div class="giscus"></div>
+
+  {{- /* data-theme 先写 preferred_color_scheme（跟随操作系统）
+
+         为什么不在服务端算好主题：HTML 是构建时生成的，那时不知道浏览器
+         选的是深色还是浅色，这个值只能由客户端纠正，见 assets/js/comments.js
+         跟随系统这个初值对「没手动切过主题」的人是准的 —— 也就是大多数情况，
+         所以不会闪，手动切过、且和系统偏好相反的人会看到评论框闪一下才变过来，
+         这是静态站点绕不开的代价，换来的是禁用 JS 也能看到评论 */}}
+  <script src="https://giscus.app/client.js"
+          data-repo="{{ $g.repo }}"
+          data-repo-id="{{ $g.repoId }}"
+          data-category="{{ $g.category }}"
+          data-category-id="{{ $g.categoryId }}"
+          data-mapping="{{ $g.mapping | default "pathname" }}"
+          data-strict="{{ $g.strict | default "0" }}"
+          data-reactions-enabled="{{ $g.reactionsEnabled | default "1" }}"
+          data-emit-metadata="0"
+          data-input-position="{{ $g.inputPosition | default "top" }}"
+          data-theme="preferred_color_scheme"
+          data-lang="{{ $g.lang | default "zh-CN" }}"
+          data-loading="{{ $g.loading | default "lazy" }}"
+          crossorigin="anonymous"
+          async></script>
+</section>
+{{- else if hugo.IsServer }}
+{{- /* 只在本地预览时出现，线上不渲染，读者不会看到一句关于配置的话
+       没有这段的话，本地看到一个空荡荡的页面只会以为评论功能坏了 */}}
+<section class="comments comments-todo">
+  <h2 class="comments-title">评论</h2>
+  <p>评论区还没接通。去 <code>hugo.toml</code> 的 <code>[params.giscus]</code>
+     里填 <code>categoryId</code>，取法见那一节的注释。</p>
+</section>
+{{- end }}

@@ -1,0 +1,24 @@
+{{ define "main" }}
+<div class="container">
+  <header class="page-head">
+    <p class="page-kicker">{{ .Data.Plural | humanize }}</p>
+    <h1 class="page-title">{{ .Title }}</h1>
+    {{- with .Content }}
+    <div class="page-desc">{{ . }}</div>
+    {{- end }}
+  </header>
+
+  {{- $paginator := .Paginate .Pages.ByDate.Reverse }}
+
+  {{- if $paginator.Pages }}
+  <div class="card-grid">
+    {{- range $paginator.Pages }}
+    {{ partial "card.html" . }}
+    {{- end }}
+  </div>
+  {{ partial "pagination.html" $paginator }}
+  {{- else }}
+  <p class="empty">这里还没有文章</p>
+  {{- end }}
+</div>
+{{ end }}

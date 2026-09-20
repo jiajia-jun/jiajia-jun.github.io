@@ -1,0 +1,66 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+{{- /* ------------------------------------------------------------------
+       防首屏闪白（FOUC）
+
+       这段脚本必须同步执行，且必须在下面引入样式表之前
+       它把「当前生效的主题」写成 html 元素上的 data-theme 属性，
+       CSS 据此立刻选对色板
+       若把这段挪到 </body> 前，暗色模式用户会看到一闪而过的白屏
+
+       注意：这里总是写入 data-theme（而不是只在用户手动选过时才写），
+       这样 CSS 里只需 [data-theme="dark"] 一处规则，
+       不必再为「跟随系统」复制一遍媒体查询
+   ------------------------------------------------------------------ */}}
+<script>
+  (function () {
+    var t = null;
+    try { t = localStorage.getItem('theme'); } catch (e) {}
+    if (t !== 'dark' && t !== 'light') {
+      t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    document.documentElement.setAttribute('data-theme', t);
+  })();
+</script>
+
+{{- $title := cond .IsHome site.Title (printf "%s · %s" .Title site.Title) }}
+<title>{{ $title }}</title>
+
+{{- $desc := site.Params.description }}
+{{- with .Description }}{{ $desc = . }}
+{{- else }}{{ if .IsPage }}{{ $desc = .Summary | plainify | truncate 150 }}{{ end }}{{ end }}
+<meta name="description" content="{{ $desc }}">
+<link rel="canonical" href="{{ .Permalink }}">
+{{- with site.Params.author }}
+<meta name="author" content="{{ . }}">
+{{- end }}
+
+{{- /* 移动端浏览器地址栏配色，跟随页面主题 */}}
+<meta name="theme-color" content="#FBFEFD" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E1626" media="(prefers-color-scheme: dark)">
+
+{{- /* 图标
+       SVG 排在前面：支持的浏览器会优先选它，矢量、缩放不糊，
+       而且标签页里换尺寸时不用重新下别的文件，后面的 .ico 是兜底
+       （老浏览器、部分阅读器，以及直接请求 /favicon.ico 的场景）
+       图标本体由 tools/make-icon.py 生成，改字母或配色后重跑一次即可 */}}
+<link rel="icon" href="{{ "favicon.svg" | relURL }}" type="image/svg+xml">
+<link rel="icon" href="{{ "favicon.ico" | relURL }}" sizes="32x32">
+<link rel="apple-touch-icon" sizes="180x180" href="{{ "apple-touch-icon.png" | relURL }}">
+<link rel="manifest" href="{{ "site.webmanifest" | relURL }}">
+
+{{- /* Open Graph */}}
+<meta property="og:type" content="{{ cond .IsPage "article" "website" }}">
+<meta property="og:title" content="{{ $title }}">
+<meta property="og:description" content="{{ $desc }}">
+<meta property="og:url" content="{{ .Permalink }}">
+<meta property="og:site_name" content="{{ site.Title }}">
+{{- if .IsPage }}
+<meta property="article:published_time" content="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}">
+{{- end }}
+<meta name="twitter:card" content="summary">
+
+{{- /* 样式 */}}
+{{- $css := resources.Get "css/main.css" | minify | fingerprint }}
+<link rel="stylesheet" href="{{ $css.RelPermalink }}" integrity="{{ $css.Data.Integrity }}">
