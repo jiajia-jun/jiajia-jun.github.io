@@ -125,7 +125,7 @@ enableGitInfo = false
   mainSections = ["posts"]
 
   # 首页身份区站名下面那行
-  bio = "你好，我是jiajiajun，欢迎来到我的博客"
+  bio = "你好，我是jiajiajun，感谢你的到来，让这里有了意义"
   github = "https://github.com/jiajia-jun"
 
   # 首页每个分类分区展示几篇文章，超出部分靠「查看全部 →」
