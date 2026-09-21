@@ -1,6 +1,6 @@
 +++
-title = "运输层：TCP 与 UDP 原理（上）"
-date = 2026-09-20T23:02:00+08:00
+title = "运输层：UDP 与 TCP 原理（上）"
+date = 2026-09-21
 categories = ["计算机网络"]
 tags = ["计算机网络", "UDP", "运输层"]
 description = "一篇讲解计算机网络运输层的UDP的原理的文章"
