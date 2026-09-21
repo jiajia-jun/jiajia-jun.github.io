@@ -12,8 +12,8 @@ draft = false
 最近看《计算机网络：自顶向下方法》这本书有点入迷了，所以一时起意就想写点东西😋  
 为了避免一个文章过于冗长，这个博客我分为（上）和（下）两篇来写了
 
-- [上篇](../transport-layer-UDP/index.md) 主要讲**前置知识和UDP的工作原理**
-- [下篇](../transport-layer-TCP/index.md) 主要讲**TCP的工作原理**
+- [上篇]({{< relref "transport-layer-UDP" >}}) 主要讲**前置知识和UDP的工作原理**
+- 下篇 主要讲**TCP的工作原理**
 
 ## 前言
 
